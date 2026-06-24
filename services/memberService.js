@@ -2,10 +2,19 @@ const config = require('../config');
 const { queryOne, execute } = require('../db');
 const { getError } = require('../utils/errorCodes');
 
+function toCents(amount) {
+  return Math.round(Number(amount) * 100);
+}
+
+function fromCents(cents) {
+  return Number((cents / 100).toFixed(2));
+}
+
 function getLevelBySpend(totalSpent) {
+  const totalCents = toCents(totalSpent);
   const levels = Object.entries(config.memberLevels)
-    .filter(([_, v]) => totalSpent >= v.minSpend)
-    .sort((a, b) => b[1].minSpend - a[1].minSpend);
+    .filter(([_, v]) => totalCents >= toCents(v.minSpend))
+    .sort((a, b) => toCents(b[1].minSpend) - toCents(a[1].minSpend));
   return levels.length > 0 ? levels[0][0] : 'NORMAL';
 }
 
@@ -15,18 +24,20 @@ function getDiscount(level) {
 }
 
 function getNextLevel(totalSpent) {
+  const totalCents = toCents(totalSpent);
   const levels = Object.entries(config.memberLevels)
-    .sort((a, b) => b[1].minSpend - a[1].minSpend);
+    .sort((a, b) => toCents(b[1].minSpend) - toCents(a[1].minSpend));
 
   let nextLevel = null;
   for (let i = levels.length - 1; i >= 0; i--) {
-    if (totalSpent < levels[i][1].minSpend) {
+    const minSpendCents = toCents(levels[i][1].minSpend);
+    if (totalCents < minSpendCents) {
       nextLevel = {
         key: levels[i][0],
         name: levels[i][1].name,
         minSpend: levels[i][1].minSpend,
         discount: levels[i][1].discount,
-        amountToReach: Number((levels[i][1].minSpend - totalSpent).toFixed(2))
+        amountToReach: fromCents(minSpendCents - totalCents)
       };
       break;
     }
@@ -35,10 +46,12 @@ function getNextLevel(totalSpent) {
 }
 
 function calcDiscountedPrice(originalPrice, level) {
+  const originalCents = toCents(originalPrice);
   const discount = getDiscount(level);
-  const finalPrice = Number((originalPrice * discount).toFixed(2));
-  const discountAmount = Number((originalPrice - finalPrice).toFixed(2));
-  return { originalPrice, finalPrice, discountAmount, discount, level };
+  const finalCents = Math.round(originalCents * discount);
+  const finalPrice = fromCents(finalCents);
+  const discountAmount = fromCents(originalCents - finalCents);
+  return { originalPrice: Number(originalPrice), finalPrice, discountAmount, discount, level };
 }
 
 async function addSpendAndUpgrade(userId, amount) {
@@ -47,7 +60,8 @@ async function addSpendAndUpgrade(userId, amount) {
     throw getError('MEMBER_NOT_FOUND');
   }
 
-  const newTotal = Number((member.total_spent + amount).toFixed(2));
+  const newTotalCents = toCents(member.total_spent) + toCents(amount);
+  const newTotal = fromCents(newTotalCents);
   const newLevel = getLevelBySpend(newTotal);
 
   await execute(
@@ -79,6 +93,8 @@ async function getMemberInfo(userId) {
 }
 
 module.exports = {
+  toCents,
+  fromCents,
   getLevelBySpend,
   getDiscount,
   getNextLevel,

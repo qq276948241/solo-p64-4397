@@ -30,8 +30,9 @@ router.post('/', authMiddleware(['admin', 'staff']), validatePhotos, async (req,
 
   const service = await queryOne('SELECT price FROM services WHERE id = ?', [appointment.service_id]);
   const originalAmount = service ? service.price : 0;
-  const discountInfo = calcDiscountedPrice(originalAmount, (await queryOne('SELECT level FROM members WHERE user_id = ?', [appointment.customer_id])).level);
-  const discountAmount = Number((originalAmount - Number(final_amount)).toFixed(2));
+  const member = await queryOne('SELECT level FROM members WHERE user_id = ?', [appointment.customer_id]);
+  const discountInfo = calcDiscountedPrice(originalAmount, member ? member.level : 'NORMAL');
+  const discountAmount = discountInfo.discountAmount;
 
   try {
     const result = await new Promise((resolve, reject) => {
@@ -82,7 +83,7 @@ router.get('/', authMiddleware(), async (req, res) => {
   try {
     const { customer_id, pet_id, groomer_id, start_date, end_date } = req.query;
     let sql = `SELECT sr.*,
-      a.appointment_date, a.appointment_time, a.status as appointment_status,
+      a.appointment_date, a.appointment_time, a.status as appointment_status, a.remark,
       p.name as pet_name, p.breed as pet_breed,
       g.name as groomer_name,
       s.name as service_name,
@@ -186,7 +187,7 @@ router.put('/:id/photos', authMiddleware(['admin', 'staff']), validatePhotos, as
 async function getRecordDetail(id) {
   const record = await queryOne(
     `SELECT sr.*,
-      a.customer_id, a.appointment_date, a.appointment_time, a.status as appointment_status,
+      a.customer_id, a.appointment_date, a.appointment_time, a.status as appointment_status, a.remark,
       p.name as pet_name, p.breed as pet_breed, p.weight as pet_weight,
       g.name as groomer_name,
       s.name as service_name, s.price as service_price,
