@@ -18,6 +18,7 @@ const db = new sqlite3.Database(config.dbPath, (err) => {
 
 db.serialize(() => {
   db.run('PRAGMA foreign_keys = ON');
+  db.run("ALTER TABLE appointments ADD COLUMN remark TEXT", (err) => {});
 });
 
 function query(sql, params = []) {

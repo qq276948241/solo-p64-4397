@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post('/', authMiddleware(['customer']), async (req, res) => {
   try {
-    const { pet_id, groomer_id, service_id, appointment_date, appointment_time } = req.body;
+    const { pet_id, groomer_id, service_id, appointment_date, appointment_time, remark } = req.body;
 
     if (!pet_id || !groomer_id || !service_id || !appointment_date || !appointment_time) {
       return fail(res, getError('PARAM_ERROR', '宠物、美容师、服务项目、日期、时段均不能为空'));
@@ -60,9 +60,9 @@ router.post('/', authMiddleware(['customer']), async (req, res) => {
 
     const result = await execute(
       `INSERT INTO appointments (customer_id, pet_id, groomer_id, service_id, 
-        appointment_date, appointment_time, status) 
-       VALUES (?, ?, ?, ?, ?, ?, '待服务')`,
-      [req.user.id, pet_id, groomer_id, service_id, appointment_date, appointment_time]
+        appointment_date, appointment_time, status, remark) 
+       VALUES (?, ?, ?, ?, ?, ?, '待服务', ?)`,
+      [req.user.id, pet_id, groomer_id, service_id, appointment_date, appointment_time, remark || null]
     );
 
     const appointment = await getAppointmentDetail(result.lastID);

@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   appointment_time TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT '待服务',
   cancel_reason TEXT,
+  remark TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE,
