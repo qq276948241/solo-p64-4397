@@ -1,34 +1,15 @@
 const express = require('express');
 const { query, queryOne, execute } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { validateAppointment } = require('../middleware/validate');
 const { getError } = require('../utils/errorCodes');
 const { success, fail } = require('../utils/response');
-const { getDiscount, getMemberInfo } = require('../services/memberService');
 
 const router = express.Router();
 
-router.post('/', authMiddleware(['customer']), async (req, res) => {
+router.post('/', authMiddleware(['customer']), validateAppointment, async (req, res) => {
   try {
     const { pet_id, groomer_id, service_id, appointment_date, appointment_time, remark } = req.body;
-
-    if (!pet_id || !groomer_id || !service_id || !appointment_date || !appointment_time) {
-      return fail(res, getError('PARAM_ERROR', '宠物、美容师、服务项目、日期、时段均不能为空'));
-    }
-
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-    const timePattern = /^([01]\d|2[0-3]):([03]0)$/;
-    if (!datePattern.test(appointment_date)) {
-      return fail(res, getError('PARAM_ERROR', '日期格式应为 YYYY-MM-DD'));
-    }
-    if (!timePattern.test(appointment_time)) {
-      return fail(res, getError('PARAM_ERROR', '时间格式应为 HH:MM (以0或30分结尾)'));
-    }
-
-    const now = new Date();
-    const appointmentDateTime = new Date(`${appointment_date}T${appointment_time}:00`);
-    if (appointmentDateTime < now) {
-      return fail(res, getError('TIME_INVALID'));
-    }
 
     const pet = await queryOne('SELECT * FROM pets WHERE id = ?', [pet_id]);
     if (!pet) {

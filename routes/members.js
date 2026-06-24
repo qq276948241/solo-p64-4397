@@ -3,7 +3,7 @@ const { query } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 const { getError } = require('../utils/errorCodes');
 const { success, fail } = require('../utils/response');
-const { getMemberInfo, getDiscount } = require('../services/memberService');
+const { getMemberInfo, getDiscount, getNextLevel } = require('../services/memberService');
 const config = require('../config');
 
 const router = express.Router();
@@ -11,6 +11,7 @@ const router = express.Router();
 router.get('/me', authMiddleware(), async (req, res) => {
   try {
     const member = await getMemberInfo(req.user.id);
+    member.next_level = getNextLevel(member.total_spent);
     return success(res, member);
   } catch (err) {
     console.error(err);
@@ -93,25 +94,5 @@ router.get('/:userId', authMiddleware(['admin', 'staff']), async (req, res) => {
     return fail(res, getError('DATABASE_ERROR', err.message), 500);
   }
 });
-
-function getNextLevel(totalSpent) {
-  const levels = Object.entries(config.memberLevels)
-    .sort((a, b) => b[1].minSpend - a[1].minSpend);
-
-  let nextLevel = null;
-  for (let i = levels.length - 1; i >= 0; i--) {
-    if (totalSpent < levels[i][1].minSpend) {
-      nextLevel = {
-        key: levels[i][0],
-        name: levels[i][1].name,
-        minSpend: levels[i][1].minSpend,
-        discount: levels[i][1].discount,
-        amountToReach: Number((levels[i][1].minSpend - totalSpent).toFixed(2))
-      };
-      break;
-    }
-  }
-  return nextLevel;
-}
 
 module.exports = router;

@@ -20,6 +20,7 @@ const errorCodes = {
   APPOINTMENT_NOT_OWNER: { code: 40005, message: '无权限操作该预约' },
   APPOINTMENT_STATUS_INVALID: { code: 40006, message: '预约状态不允许此操作' },
   TIME_INVALID: { code: 40007, message: '预约时间不能早于当前时间' },
+  REMARK_TOO_LONG: { code: 40008, message: '备注长度超过限制' },
 
   RECORD_NOT_FOUND: { code: 50001, message: '服务记录不存在' },
   RECORD_EXISTS: { code: 50002, message: '该预约已有服务记录' },

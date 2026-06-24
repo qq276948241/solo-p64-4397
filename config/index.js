@@ -10,5 +10,6 @@ module.exports = {
   },
   serviceTypes: ['洗澡', '剪毛', 'SPA'],
   appointmentStatus: ['待服务', '已取消', '服务中', '已完成'],
-  maxPhotos: 3
+  maxPhotos: 3,
+  remarkMaxLength: 200
 };

@@ -14,6 +14,33 @@ function getDiscount(level) {
   return levelConfig ? levelConfig.discount : 1;
 }
 
+function getNextLevel(totalSpent) {
+  const levels = Object.entries(config.memberLevels)
+    .sort((a, b) => b[1].minSpend - a[1].minSpend);
+
+  let nextLevel = null;
+  for (let i = levels.length - 1; i >= 0; i--) {
+    if (totalSpent < levels[i][1].minSpend) {
+      nextLevel = {
+        key: levels[i][0],
+        name: levels[i][1].name,
+        minSpend: levels[i][1].minSpend,
+        discount: levels[i][1].discount,
+        amountToReach: Number((levels[i][1].minSpend - totalSpent).toFixed(2))
+      };
+      break;
+    }
+  }
+  return nextLevel;
+}
+
+function calcDiscountedPrice(originalPrice, level) {
+  const discount = getDiscount(level);
+  const finalPrice = Number((originalPrice * discount).toFixed(2));
+  const discountAmount = Number((originalPrice - finalPrice).toFixed(2));
+  return { originalPrice, finalPrice, discountAmount, discount, level };
+}
+
 async function addSpendAndUpgrade(userId, amount) {
   const member = await queryOne('SELECT * FROM members WHERE user_id = ?', [userId]);
   if (!member) {
@@ -54,6 +81,8 @@ async function getMemberInfo(userId) {
 module.exports = {
   getLevelBySpend,
   getDiscount,
+  getNextLevel,
+  calcDiscountedPrice,
   addSpendAndUpgrade,
   getMemberInfo
 };

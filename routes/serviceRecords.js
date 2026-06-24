@@ -1,14 +1,14 @@
 const express = require('express');
 const { query, queryOne, execute, db } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { validatePhotos } = require('../middleware/validate');
 const { getError } = require('../utils/errorCodes');
 const { success, fail } = require('../utils/response');
-const { addSpendAndUpgrade, getDiscount } = require('../services/memberService');
-const config = require('../config');
+const { addSpendAndUpgrade, calcDiscountedPrice } = require('../services/memberService');
 
 const router = express.Router();
 
-router.post('/', authMiddleware(['admin', 'staff']), async (req, res) => {
+router.post('/', authMiddleware(['admin', 'staff']), validatePhotos, async (req, res) => {
   const { appointment_id, pet_behavior, supplies_used, final_amount, staff_notes, photo_urls } = req.body;
 
   if (!appointment_id) {
@@ -16,12 +16,6 @@ router.post('/', authMiddleware(['admin', 'staff']), async (req, res) => {
   }
   if (final_amount === undefined || final_amount === null) {
     return fail(res, getError('PARAM_ERROR', '实收金额不能为空'));
-  }
-  if (photo_urls && !Array.isArray(photo_urls)) {
-    return fail(res, getError('PARAM_ERROR', '照片URL必须是数组'));
-  }
-  if (photo_urls && photo_urls.length > config.maxPhotos) {
-    return fail(res, getError('PHOTOS_LIMIT'));
   }
 
   const appointment = await queryOne('SELECT * FROM appointments WHERE id = ?', [appointment_id]);
@@ -36,7 +30,8 @@ router.post('/', authMiddleware(['admin', 'staff']), async (req, res) => {
 
   const service = await queryOne('SELECT price FROM services WHERE id = ?', [appointment.service_id]);
   const originalAmount = service ? service.price : 0;
-  const discountAmount = Number((originalAmount - final_amount).toFixed(2));
+  const discountInfo = calcDiscountedPrice(originalAmount, (await queryOne('SELECT level FROM members WHERE user_id = ?', [appointment.customer_id])).level);
+  const discountAmount = Number((originalAmount - Number(final_amount)).toFixed(2));
 
   try {
     const result = await new Promise((resolve, reject) => {
@@ -166,15 +161,9 @@ router.get('/:id', authMiddleware(), async (req, res) => {
   }
 });
 
-router.put('/:id/photos', authMiddleware(['admin', 'staff']), async (req, res) => {
+router.put('/:id/photos', authMiddleware(['admin', 'staff']), validatePhotos, async (req, res) => {
   try {
     const { photo_urls } = req.body;
-    if (!Array.isArray(photo_urls)) {
-      return fail(res, getError('PARAM_ERROR', '照片URL必须是数组'));
-    }
-    if (photo_urls.length > config.maxPhotos) {
-      return fail(res, getError('PHOTOS_LIMIT'));
-    }
 
     const record = await queryOne('SELECT id FROM service_records WHERE id = ?', [req.params.id]);
     if (!record) {
